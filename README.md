@@ -137,7 +137,7 @@ $ python3 ./pcaprint.py -c capture.pcapng -p
 |       Top2= sig:1:Date,Server,?Last-Modified,?Accept-Ranges=[bytes],?Content-Length,?Connection=[close],?Transfer-Encoding=[chunked],Content-Type:Keep-Alive:Apache, label:s:!:Apache:2.x
 `----
 
-P 10.11.10.136/52244 -> XXX.XXX.XXX.XXX/2013 (syn)]-
+.-[TCP 10.11.10.136/52244 -> XXX.XXX.XXX.XXX/2013 (syn)]-
 |---(p0f signatures)
 |   label= s:!:NMap:SYN scan
 |   best guess sig= *:64-:0:1460:1024,0:mss::0
