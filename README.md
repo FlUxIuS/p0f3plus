@@ -10,7 +10,7 @@ A native passive and unofficial implementation of p0f3 in Python
 
 To fingerprint a PCAP file, the `pcaprint.py` can be used in two different ways:
 
-* the classic way that printis each frames like p0f3 do;
+* the classic way that prints each frames like p0f3 do;
 * or to aggregate services in a XML.
 
 Additionnal information are added to p0f3 signatures if some data are 
@@ -20,11 +20,11 @@ identified in packets. These information include HTTP or SMB headers
 ## Why I should use this tool?
 
 This tool is slow compared to the original C implementation of p0f3, but can be
-used to identify packets, and be extend very quickly with useful features that 
-use also data contained in the packets. 
+used to identify packets, and can be extend very quickly with useful features that 
+use payloads contained in the packets. 
 
 Originally, this tool was developped because the p0f implementation in Scapy is
-obsolete with p0f3 signatures, and these signatures where needed as an additionnal
+obsolete with p0f3 signatures, and these signatures were needed as a backup
 way to identify an OS, or/and a service.  
 
 ### Quick run
@@ -42,6 +42,8 @@ As a results, you'll see a basic XML files that contains information for each IP
 as follows:
 
 ```
+$ python3 ./pcaprint.py -c capture.pcapng -o output.xml
+$ cat output.xml
      <host>
         <address addrtype="ipv4">XXX.XXX.XXX.38</address>
         <hostnames/>
@@ -116,6 +118,8 @@ If you're nostalgic and want to print the PCAP pretty like p0f3 do, you can run
 the following command:
 
 ```
+$ python3 ./pcaprint.py -c capture.pcapng -p
+
 .-[TCP XXX.XXX.XXX.XXX/80 -> 10.11.10.136/48370 (push+ack)]-
 |---(packet payload fingerprints)
 |   os: Debian
