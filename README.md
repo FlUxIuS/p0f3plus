@@ -198,6 +198,18 @@ P 10.11.10.136/52244 -> XXX.XXX.XXX.XXX/2013 (syn)]-
 |   distance= 2
 `----
 ```
+## Use the API
+
+You can add the project in your Python library path, then p0f3plus's methods as follows to identify a packet:
+
+```python
+from p0f3p.core.p0f3p import *
+
+a = p0f3p()
+packet = '\x00\xba\xd0\xc0\xff\xee@Z\x9b\xe8\xdb\x91\x08\x00E\x00\x015\x0b @\x007\x06\x99\x07h\x10!\xf9BBBB\x00P\xb7t\xa4\xf0\x1d\x0c\x1c{\xcb\x9bP\x18\x00 v\xdd\x00\x00HTTP/1.1 204 No Content\r\nDate: Thu, 21 Apr 2016 11:08:56 GMT\r\nConnection: keep-alive\r\nCache-Control: private\r\nPragma: no-cache\r\nX-Frame-Options: SAMEORIGIN\r\nX-Request-Guid: 2f5dfddc-1d7a-45d7-a739-00584d917948\r\nServer: cloudflare-nginx\r\nCF-RAY: 29706181e6ee102b-CDG\r\n\r\n'
+pktsign = a.pkt2sig(Ether(packet)) # transforms it to 'PacketSignature' object. Value of pktsign.signature = '1:Date,Connection=[keep-alive],Cache-Control,Pragma,X-Frame-Options,X-Request-Guid,Server,CF-RAY:*:cloudflare'
+matches = a.matchsig(pktsign) # Gets matches in a 'ClassifiedSignature' object. The computed signature before the matching is '1:Date,Server,Connection=[Keep-Alive],Keep-Alive=[timeout]:Content-Type,Accept-Ranges:Apache'. The best match is '1:Date,Server,Connection=[Keep-Alive],Keep-Alive=[timeout]:Content-Type,Accept-Ranges:Apache' and you can access to the top3, label, distance, etc. to perform your analysises.
+```
 
 ## Contributions
 
