@@ -1,5 +1,5 @@
 # p0f3plus
-A native passive and unofficial implementation of p0f3 in Python
+A native and unofficial implementation of p0f3 in Python with extra analysis features: It's p0f+
 
 ## Dependencies
 
