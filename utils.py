@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from core.p0f3p import *
 from xml.dom.minidom import Document
+import os, sys
+from core.p0f3p import *
 
 def TCPshow(cap):
     p = p0f3p()
@@ -57,16 +58,38 @@ def processCaptures(pcap):
                 hosts[cap["IP"].src] = {"applications":[],
                                         "matches":{},
                                         "os":None,
-                                        "hostnames":None}
+                                        "hostnames":None,
+                                        "otherports": {}}
+                if cap["IP"].sport not in hosts[cap["IP"].src]["otherports"]:
+                    hosts[cap["IP"].src]["otherports"][cap["IP"].sport] = {'flag':cap['TCP'].flags, 'matched':False}
             if tsig.extra is not None and type(tsig.extra).__name__ == "dict":
                 if "os" in tsig.extra:
                     hosts[cap["IP"].src]["os"] = tsig.extra["os"]
                 if "application" in tsig.extra:
                     filt = list(filter(lambda app: app['appname'] == tsig.extra["application"], hosts[cap["IP"].src]["applications"]))
                     if len(filt) == 0:
+                        if cap["IP"].sport in hosts[cap["IP"].src]["otherports"]:
+                            hosts[cap["IP"].src]["otherports"][cap["IP"].sport]['matched'] = True
+                        extrainfo = None
+                        if "os" in tsig.extra:
+                            extrainfo = tsig.extra['os']
                         hosts[cap["IP"].src]["applications"].append({ "version" : tsig.extra["version"],
                                                                       "sport" : cap["IP"].sport,
+                                                                      "extrainf" : extrainfo,
+                                                                      "apptype" : tsig.extra["apptype"],
                                                                       "appname" : tsig.extra["application"] })
+                    elif len(filt) == 1:
+                        if filt[0]['extrainf'] is None and 'os' in tsig.extra:
+                            if tsig.extra['os'] is not None:
+                                extrainfo = ''
+                                for k,v in tsig.extra.items():
+                                    if extrainfo != '':
+                                        extrainfo += ' '
+                                    if v is not None:
+                                        extrainfo += "%s:%s" % (k,v)    
+                                id_ = hosts[cap["IP"].src]["applications"].index(filt[0])
+                                hosts[cap["IP"].src]["applications"][id_]['extrainf'] = extrainfo
+                        
             if match is not None:
                 if "bests" not in hosts[cap["IP"].src]["matches"]:
                     hosts[cap["IP"].src]["matches"]["bests"] = []
@@ -91,17 +114,20 @@ def processCaptures(pcap):
                             "type":systype,
                             "os":sysos,})
         elif cap.haslayer("IP") and cap.haslayer("DNSRR"): # resolve hosts
-            ipreq = convB2Str(cap[DNSRR].rdata)
-            domainreq = convB2Str(cap[DNSRR].rrname)
-            if ipreq not in hosts:
-                hosts[ipreq] = {"applications":[],
-                                "matches":{},
-                                "os":None,
-                                "hostnames":None}
-            if hosts[ipreq]["hostnames"] is None:
-                hosts[ipreq]["hostnames"] = []
-            if domainreq not in hosts[ipreq]["hostnames"]:
-                hosts[ipreq]["hostnames"].append(domainreq)
+            if cap[DNSRR].type == 1:
+                ipreq = convB2Str(cap[DNSRR].rdata)
+                domainreq = convB2Str(cap[DNSRR].rrname)
+                if ipreq not in hosts:
+                    hosts[ipreq] = {"applications":[],
+                                    "matches":{},
+                                    "os":None,
+                                    "hostnames":None,
+                                    "otherports":{}
+                                    }
+                if hosts[ipreq]["hostnames"] is None:
+                    hosts[ipreq]["hostnames"] = []
+                if domainreq not in hosts[ipreq]["hostnames"]:
+                    hosts[ipreq]["hostnames"].append(domainreq)
     return hosts
 
 def recursechild(doc, parent, pyobj):
@@ -125,6 +151,114 @@ def recursechild(doc, parent, pyobj):
                 elif type(i).__name__ == "str":
                     svalue = doc.createTextNode(str(i))
                     subel.appendChild(svalue)
+
+flagslist = {
+    0x2 : 'syn',
+    0x10 : 'ack',
+    0x12 : 'syn-ack',
+    0x18 : 'push-ack',
+}
+
+def flag2str(flag):
+    if flag in flagslist:
+        return flagslist[flag]
+    else:
+        return
+
+def exportNmapXML(pcap, out='nmapout-p0f3p.xml', retdom=False):
+    import time
+    doc = Document()
+    pyobj = processCaptures(pcap)
+    root = doc.createElement('nmaprun')
+    pi = doc.createProcessingInstruction('xml-stylesheet',
+                                     'type="text/xsl" href="file:///usr/local/bin/../share/nmap/nmap.xsl"')
+    first = doc.firstChild
+    doc.insertBefore(pi, first)
+    root.setAttribute('scanner', 'p0fplus')
+    t = int(time.time())
+    root.setAttribute('start', str(t))
+    ftime = time.ctime(t)
+    root.setAttribute('startstr', ftime.replace('  ',' '))
+    doc.appendChild(root)
+    for k,v in pyobj.items():
+        host = doc.createElement('host')
+        root.appendChild(host)
+        addr = doc.createElement('address')
+        addr.setAttribute('addrtype', 'ipv4')
+        k = convB2Str(k)
+        addr.setAttribute('ipaddr', k)
+        host.appendChild(addr)
+        hostnames = doc.createElement('hostnames')
+        host.appendChild(hostnames)
+        if v['hostnames'] is not None:
+            for h in v['hostnames']:
+                hostname = doc.createElement('hostname') 
+                if h[-1] == '.':
+                    h = h[:-1]
+                hostname.setAttribute('name', h)
+                hostnames.appendChild(hostname)
+        ports = None
+        if v['applications'] is not None:
+            for app in v['applications']:
+                if 'sport' in app:
+                    ports = doc.createElement('ports')
+                    host.appendChild(ports)
+                    port = doc.createElement('port')
+                    port.setAttribute('protocol', 'tcp') # FIXME: change when UDP is supported
+                    port.setAttribute('portid', str(app['sport']))
+                    ports.appendChild(port)
+                    state = doc.createElement('state')
+                    state.setAttribute('state', 'open')
+                    state.setAttribute('reason', 'push-ack')
+                    port.appendChild(state)
+                    service = doc.createElement('service')
+                    if 'appname' in app:
+                        service.setAttribute('product',app['appname'])
+                    if 'version' in app:
+                        service.setAttribute('version', app['version'])
+                    if 'extrainf' in app:
+                        service.setAttribute('extrainfo', app['extrainf'])
+                    port.appendChild(service)
+        if v['otherports'] is not None:
+            for portk, value in v['otherports'].items():
+                if value['matched'] is False:
+                    if ports is None:
+                        ports = doc.createElement('ports')
+                        host.appendChild(ports)
+                    port = doc.createElement('port')
+                    port.setAttribute('protocol', 'tcp')
+                    port.setAttribute('portid', str(portk))
+                    ports.appendChild(port)
+                    state = doc.createElement('state')
+                    state.setAttribute('state', 'open')
+                    reasonstr = flag2str(value['flag'])
+                    if reasonstr is not None:
+                        state.setAttribute('reason', reasonstr)
+                    port.appendChild(state) 
+        if 'guesses' in v['matches']:
+            os = doc.createElement('os')
+            host.appendChild(os)
+            osmatch = doc.createElement('osmatch')
+            for guess in v['matches']['guesses']:
+                if guess['type'] != '!': #is a system
+                    osmatch = doc.createElement('osmatch')
+                    namematch = ' '.join(guess['label'].split(':')[2:]).replace('.x', '')
+                    osmatch.setAttribute('name', namematch)
+                    accuracy = str(100-guess['distance']) # best formula ever!
+                    osmatch.setAttribute('accuracy', accuracy)
+                    os.appendChild(osmatch)
+                    osclass = doc.createElement('osclass')
+                    osclass.setAttribute('osfamily', guess['os'])
+                    osclass.setAttribute('osgen', guess['version'])
+                    osclass.setAttribute('accuracy', accuracy)
+                    osmatch.appendChild(osclass)
+    if retdom is True:
+        return doc # return only the minidom object
+    else:
+        doc.writexml( open(out, 'w'),
+                   indent="  ",
+                   addindent="  ",
+                   newl='\n')
 
 def exportXML(pcap, out="out-p0f3p.xml"):
     doc = Document()

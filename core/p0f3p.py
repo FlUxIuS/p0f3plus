@@ -3,7 +3,7 @@
 from __future__ import print_function
 import re
 from core.layers import *
-import sys
+import sys, os
 import Levenshtein
 import codecs 
 
@@ -35,7 +35,10 @@ import codecs
 #       + implement other distance calculation methods
 ###############################################################################
 
-default_fp = "data/p0f.fp"
+dir_ = os.path.dirname(__file__)
+
+default_fp = os.path.abspath(dir_ + "/../data/p0f.fp")
+
 
 class ClassifiedSignature(object):
     """
@@ -243,6 +246,7 @@ class p0f3p(object):
             pkt_sign.signature = sig
             pkt_sign.packet_type = pkttype
             pkt_sign.extra = othervalues
+            pkt_sign.extra["apptype"] = 'http'
         # NetBIOS SMB fingerprint processing
         elif b"SMB" in pkt.load[:10] and pkt.sport == 139:
             nbios = NetBIOS(pkt.load)
@@ -250,10 +254,11 @@ class p0f3p(object):
                 try:
                     pkt_sign.extra = {}
                     pkt_sign.extra["application"] = "NetBIOS"
+                    pkt_sign.extra["apptype"] = 'smb'
                     pkt_sign.extra["version"] = None
-                    pkt_sign.extra["os"] = nbios[SMBHead].SSAXP[SessionSetupAndXResponse].NativeOS
-                    pkt_sign.extra["NativeLANManager"] = nbios[SMBHead].SSAXP[SessionSetupAndXResponse].NativeOS
-                except:
+                    pkt_sign.extra["os"] = nbios[SMBHead].SSAXP[SessionSetupAndXResponse].NativeOS.decode('utf-16')
+                    pkt_sign.extra["NativeLANManager"] = nbios[SMBHead].SSAXP[SessionSetupAndXResponse].NativeOS.decode('utf-16')
+                except Exception:
                     pass
         elif b"SSH" in pkt.load[:3] and b"\r\n" in pkt.load:
             strload = pkt.load
@@ -270,10 +275,12 @@ class p0f3p(object):
                 pkt_sign.extra["application"] = application
                 pkt_sign.extra["version"] = version
                 pkt_sign.extra["os"] = distribution
+                pkt_sign.extra["apptype"] = 'ssh'
             except:
                 pkt_sign.extra["application"] = sshheader.split("-")[2]
                 pkt_sign.extra["version"] = None
                 pkt_sign.extra["os"] = None
+                pkt_sign.extra["apptype"] = 'ssh'
         return pkt_sign
 
     def pkt2sig(self, pkt):

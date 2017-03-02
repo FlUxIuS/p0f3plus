@@ -1,5 +1,5 @@
 # p0f3plus
-A native and unofficial implementation of p0f3 in Python with extra analysis features: It's p0f+!
+A native passive and unofficial implementation of p0f3 in Python
 
 ## Dependencies
 
@@ -11,7 +11,7 @@ A native and unofficial implementation of p0f3 in Python with extra analysis fea
 To fingerprint a PCAP file, the `pcaprint.py` can be used in two different ways:
 
 * the classic way that prints each frames like p0f3 do;
-* or to aggregate services in a XML.
+* or to aggregate services in a nmap XML file like.
 
 Additionnal information are added to p0f3 signatures if some data are 
 identified in packets. These information include HTTP or SMB headers
@@ -31,7 +31,7 @@ way to identify an OS, or/and a service.
 
 #### Output in XML
 
-To p0f3 with the default script `pcaprint.py` against a PCAP to output an XML,
+To p0f3 with the default script `pcaprint.py` against a PCAP to output a nmap XML (beta),
 you can use the following command:
 
 ```
@@ -43,73 +43,107 @@ as follows:
 
 ```
 $ python3 ./pcaprint.py -c capture.pcapng -o output.xml
-$ cat output.xml
-     <host>
-        <address addrtype="ipv4">XXX.XXX.XXX.38</address>
-        <hostnames/>
-        <applications>
-          <application>
-            <appname>X2S_Platform</appname>
-            <version/>
-            <sport>80</sport>
-          </application>
-        </applications>
-        <matches>
-          <bests>
-            <best>
-              <version>3.x</version>
-              <label>s:unix:Linux:3.x</label>
-              <type>unix</type>
-              <distance>2</distance>
-              <os>Linux</os>
-            </best>
-            <best>
-              <version>2.x</version>
-              <label>s:!:Apache:2.x</label>
-              <type>!</type>
-              <distance>103</distance>
-              <os>Apache</os>
-            </best>
-            [...]
-          </bests>
-        </matches>
+<?xml version="1.0" ?>
+  <?xml-stylesheet type="text/xsl" href="file:///usr/local/bin/../share/nmap/nmap.xsl"?>
+  <nmaprun scanner="p0fplus" start="1488468846" startstr="Thu Mar 2 16:34:06 2017">
+    <host>
+      <address addrtype="ipv4" ipaddr="172.XXX.XXX.XXX"/>
+      <hostnames/>
+      <ports>
+        <port portid="39428" protocol="tcp">
+          <state reason="push-ack" state="open"/>
+          <service extrainfo="Debian" product="OpenSSH" version="7.3p1"/>
+        </port>
+      </ports>
+      <os>
+        <osmatch accuracy="100" name="Linux 3.11 and newer">
+          <osclass accuracy="100" osfamily="Linux" osgen="3.11 and newer"/>
+        </osmatch>
+        <osmatch accuracy="99" name="Linux 2.2">
+          <osclass accuracy="99" osfamily="Linux" osgen="2.2.x"/>
+        </osmatch>
+      </os>
+    </host>
+    <host>
+      <address addrtype="ipv4" ipaddr="XXX.XXX.XXX.12"/>
+      <hostnames/>
+      <ports>
+        <port portid="443" protocol="tcp">
+          <state reason="ack" state="open"/>
+        </port>
+      </ports>
+    </host>
+    <host>
+      <address addrtype="ipv4" ipaddr="104.16.26.235"/>
+      <hostnames/>
+      <ports>
+        <port portid="443" protocol="tcp">
+          <state reason="syn-ack" state="open"/>
+        </port>
+      </ports>
+      <os>
+        <osmatch accuracy="94" name="Linux 2.6">
+          <osclass accuracy="94" osfamily="Linux" osgen="2.6.x"/>
+        </osmatch>
+        <osmatch accuracy="94" name="Linux 3">
+          <osclass accuracy="94" osfamily="Linux" osgen="3.x"/>
+        </osmatch>
+      </os>
+    </host>
+    <host>
+      <address addrtype="ipv4" ipaddr="104.16.118.182"/>
+      <hostnames>
+        <hostname name="stackexchange.com"/>
+        <hostname name="christianity.stackexchange.com"/>
+        <hostname name="money.stackexchange.com"/>
+        <hostname name="puzzling.stackexchange.com"/>
+        <hostname name="rpg.stackexchange.com"/>
+        <hostname name="tex.stackexchange.com"/>
+        <hostname name="webapps.stackexchange.com"/>
+        <hostname name="workplace.stackexchange.com"/>
+        <hostname name="3dprinting.stackexchange.com"/>
+        <hostname name="astronomy.stackexchange.com"/>
+        <hostname name="biology.stackexchange.com"/>
+        <hostname name="blender.stackexchange.com"/>
+        <hostname name="chemistry.stackexchange.com"/>
+        <hostname name="expressionengine.stackexchange.com"/>
+      </hostnames>
+    </host>
+    <host>
+      <address addrtype="ipv4" ipaddr="216.XXX.XXX.XXX"/>
+      <hostnames/>
+      <ports>
+        <port portid="80" protocol="tcp">
+          <state reason="push-ack" state="open"/>
+          <service extrainfo="" product="cafe" version=""/>
+        </port>
+      </ports>
+      <os>
+        <osmatch accuracy="92" name="Linux 2.6">
+          <osclass accuracy="92" osfamily="Linux" osgen="2.6.x"/>
+        </osmatch>
+        <osmatch accuracy="92" name="Linux 3">
+          <osclass accuracy="92" osfamily="Linux" osgen="3.x"/>
+        </osmatch>
+      </os>
     </host>
     [...]
     <host>
-        <address addrtype="ipv4">XXX.XXX.XXX.102</address>
-        <hostnames>
-          <hostname>XXXXX.com.</hostname>
-        </hostnames>
-        <applications>
-          <application>
-            <appname>nginx</appname>
-            <version/>
-            <sport>80</sport>
-          </application>
-        </applications>
-        <matches>
-          <bests>
-            <best>
-              <version>2.6.x</version>
-              <label>s:unix:Linux:2.6.x</label>
-              <type>unix</type>
-              <distance>4</distance>
-              <os>Linux</os>
-            </best>
-            [...]
-         </bests>
-        </matches>
-       [...]
-    <host>
-        <address addrtype="ipv4">10.0.0.13</address>
-        <hostnames/>
-        <applications>
-          <application>
-            <appname>AndroidSDK_21_klte_5</appname>
-            <version>.0</version>
-            <sport>52277</sport>
-          </application>
-    [...] 
+      <address addrtype="ipv4" ipaddr="XXX.XXX.XXX.XXX"/>
+      <hostnames/>
+      <ports>
+        <port portid="6526" protocol="tcp">
+          <state reason="push-ack" state="open"/>
+          <service extrainfo="" product="OpenSSH" version="6.7p1"/>
+        </port>
+      </ports>
+      <os>
+        <osmatch accuracy="99" name="Linux 3">
+          <osclass accuracy="99" osfamily="Linux" osgen="3.x"/>
+        </osmatch>
+      </os>
+    </host>
+  </nmaprun>
 ```
 
 #### The classic p0f way
@@ -123,7 +157,7 @@ $ python3 ./pcaprint.py -c capture.pcapng -p
 .-[TCP XXX.XXX.XXX.XXX/80 -> 10.11.10.136/48370 (push+ack)]-
 |---(packet payload fingerprints)
 |   os: Debian
-|   version: 2.2.22
+|   version: 2.222
 |   allow: GET,HEAD,POST,OPTIONS
 |   application: Apache
 |---(p0f signatures)
@@ -137,7 +171,7 @@ $ python3 ./pcaprint.py -c capture.pcapng -p
 |       Top2= sig:1:Date,Server,?Last-Modified,?Accept-Ranges=[bytes],?Content-Length,?Connection=[close],?Transfer-Encoding=[chunked],Content-Type:Keep-Alive:Apache, label:s:!:Apache:2.x
 `----
 
-.-[TCP 10.11.10.136/52244 -> XXX.XXX.XXX.XXX/2013 (syn)]-
+P 10.11.10.136/52244 -> XXX.XXX.XXX.XXX/2013 (syn)]-
 |---(p0f signatures)
 |   label= s:!:NMap:SYN scan
 |   best guess sig= *:64-:0:1460:1024,0:mss::0
