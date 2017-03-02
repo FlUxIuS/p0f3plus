@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     pcap = rdpcap(args.capture)
     if args.output is not None:
-        exportXML(pcap, args.output)
+        exportNmapXML(pcap, args.output)
     if args.display is not False:
         for cap in pcap:
             TCPshow(cap)
