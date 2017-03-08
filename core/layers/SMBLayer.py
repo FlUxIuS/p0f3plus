@@ -85,8 +85,31 @@ class SSAXR_SBlob(Packet):
     def extract_padding(self, p):
         return "", p
 
+class SessionSetupAndXRequest(Packet):
+    name = "SessionSetupAndXRequest "
+    fields_desc=[
+        ByteField("WordCount", 4),
+        ByteEnumField("AndXCommand", 0xff, andXcommand),
+        ByteField("Reserved", 0),
+        LEShortField("AndXOffset", 379),
+        ShortField("MaxBuffer", 0),
+        ShortField("MaxMpxCount", 0),
+        ShortField("VCNumber", 0),
+        XIntField("SessionKey", 0),
+        FieldLenField("SecurityBlobLength", None, count_of="NBdata", fmt="<H"),
+        XIntField("Reserved2", 0),
+        XIntField("Capabilities", 0),
+        LEShortField("ByteCount", 0x0000),
+        PacketListField("SecureBlobContent", None, SSAXR_SBlob, length_from=lambda pkt:pkt.SecurityBlobLength),
+        StrFixedLenField("NativeOS", "\x00"*34, 34),
+        StrFixedLenField("NativeLANManager", "\x00"*36, 36),
+    ]
+
+    def extract_padding(self, p):
+        return "", p
+
 class SessionSetupAndXResponse(Packet):
-    name = "SessionSetupAndX "
+    name = "SessionSetupAndXResponse "
     fields_desc=[
         ByteField("WordCount", 4),
         ByteEnumField("AndXCommand", 0xff, andXcommand),
@@ -118,7 +141,9 @@ class SMBHead(Packet):
         ShortField("UserID", 0),
         ShortField("MultiplexID", 0),
         ConditionalField(PacketField("SSAXP", None, SessionSetupAndXResponse),
-            lambda pkt:pkt.Command == 0x73),
+            lambda pkt:pkt.Command == 0x73 and (pkt.Flags >> 7) == 1),
+        ConditionalField(PacketField("SSAXPR", None, SessionSetupAndXRequest),
+            lambda pkt:pkt.Command == 0x73 and (pkt.Flags >> 7) == 0),
     ]
 
     def extract_padding(self, p):
@@ -129,7 +154,7 @@ class NB_header(Packet):
     fields_desc=[
         StrFixedLenField("header", "\xff\x53\x4d\x42", 4),
         ConditionalField(PacketField("SMBP", None, SMBHead),
-            lambda pkt:pkt.header == "\xff\x53\x4d\x42"),
+            lambda pkt:pkt.header == b"\xff\x53\x4d\x42"),
     ] 
 
     def extract_padding(self, p):

@@ -248,7 +248,7 @@ class p0f3p(object):
             pkt_sign.extra = othervalues
             pkt_sign.extra["apptype"] = 'http'
         # NetBIOS SMB fingerprint processing
-        elif b"SMB" in pkt.load[:10] and pkt.sport == 139:
+        elif b"SMB" in pkt.load[:10]:# and pkt.sport == 139:
             nbios = NetBIOS(pkt.load)
             if nbios.haslayer("SMBHead"):
                 try:
