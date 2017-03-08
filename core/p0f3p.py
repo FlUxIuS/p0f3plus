@@ -260,6 +260,7 @@ class p0f3p(object):
                     pkt_sign.extra["NativeLANManager"] = nbios[SMBHead].SSAXP[SessionSetupAndXResponse].NativeOS.decode('utf-16')
                 except Exception:
                     pass
+        # SSH fingerprint processing
         elif b"SSH" in pkt.load[:3] and b"\r\n" in pkt.load:
             strload = pkt.load
             pkt_sign.extra = {}
@@ -281,6 +282,17 @@ class p0f3p(object):
                 pkt_sign.extra["version"] = None
                 pkt_sign.extra["os"] = None
                 pkt_sign.extra["apptype"] = 'ssh'
+        # FTP fingerprint processing
+        elif b"220" in pkt.load[:3]:
+            strload = pkt.load[4:]
+            pkt_sign.extra = {}
+            if type(strload).__name__ == "bytes":
+                strload = strload.decode("utf-8", "ignore")
+            match = re.match(r"([\w]+) ([\d\.]+)?.*\((\w+)\)?", strload)
+            if match is not None:
+                pkt_sign.extra["application"] = match.group(1)
+                pkt_sign.extra["version"] = match.group(2)
+                pkt_sign.extra["apptype"] = 'ftp'
         return pkt_sign
 
     def pkt2sig(self, pkt):
@@ -295,10 +307,14 @@ class p0f3p(object):
         proto = None
         pkttype = None # pkttype if ack-push
         pkt_sign = PacketSignature()
-        if pkt.haslayer("IP"):
-            proto = pkt["IP"].proto
+        if pkt.haslayer("IP") or pkt.haslayer("IPv6"):
+            if pkt.haslayer("IP"):
+                proto = pkt["IP"].proto
+            else:
+                proto = pkt["IPv6"].nh
             sig += str(pkt.version)
-            sig += ":"+str(pkt.ttl)
+            if pkt.haslayer("IP"):
+                sig += ":"+str(pkt.ttl)
             # TODO: Olen for IPV6
             sig += ":0"
             if pkt.haslayer("TCP"):
@@ -310,6 +326,8 @@ class p0f3p(object):
                             return self.pktloadid(pkt, pkt_sign)
                         else:
                             pkt_sign = self.pktloadid(pkt, pkt_sign)
+                            if pkt.haslayer("IPv6"):
+                                return pkt_sign
                 optiondict = {}
                 for option in pkt["TCP"].options:
                     optiondict[option[0].lower()] = option[1]

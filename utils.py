@@ -7,10 +7,16 @@ from core.p0f3p import *
 def TCPshow(cap):
     p = p0f3p()
     tsig = p.pkt2sig(cap) # calculate the signature of the packet
-    match = p.matchsig(tsig) # match packet's signature with another in the p0f3 database
+    match = None
+    if cap.haslayer("IP"):
+        match = p.matchsig(tsig) # match packet's signature with another in the p0f3 database
     flag = None
     othervalue = None
-    if cap.haslayer("IP") and cap.haslayer("TCP"):
+    if (cap.haslayer("IP") or cap.haslayer("IPv6")) and cap.haslayer("TCP"):
+        if cap.haslayer("IP"):
+            ippart = cap["IP"]
+        else:
+            ippart = cap["IPv6"]
         if cap["TCP"].flags == 0x18: # push-ack contain much more information
             flag = "push+ack"
         else:
@@ -20,7 +26,7 @@ def TCPshow(cap):
                 flag = "syn+ack"
         if tsig.extra is None and match is None:
             return 
-        print(".-[TCP %s/%s -> %s/%s (%s)]-" % (cap["IP"].src, cap["IP"].sport, cap["IP"].dst, cap["IP"].dport, flag))
+        print(".-[TCP %s/%s -> %s/%s (%s)]-" % (ippart.src, ippart.sport, ippart.dst, ippart.dport, flag))
         if tsig.extra is not None and type(tsig.extra).__name__ == "dict":
             print("|---(packet payload fingerprints)")
             for key, value in tsig.extra.items():
@@ -51,30 +57,35 @@ def processCaptures(pcap):
     for cap in pcap:
         flag = "unknown"
         othervalue = None
-        if cap.haslayer("IP") and cap.haslayer("TCP"):
+        if (cap.haslayer("IP") or cap.haslayer("IPv6")) and cap.haslayer("TCP"):
             tsig = p.pkt2sig(cap)
-            match = p.matchsig(tsig)
-            if cap["IP"].src not in hosts:
-                hosts[cap["IP"].src] = {"applications":[],
+            match = None
+            if cap.haslayer("IP"):
+                match = p.matchsig(tsig)
+                ippart = cap["IP"]
+            else:
+                ippart = cap["IPv6"]
+            if ippart.src not in hosts:
+                hosts[ippart.src] = {"applications":[],
                                         "matches":{},
                                         "os":None,
                                         "hostnames":None,
                                         "otherports": {}}
-                if cap["IP"].sport not in hosts[cap["IP"].src]["otherports"]:
-                    hosts[cap["IP"].src]["otherports"][cap["IP"].sport] = {'flag':cap['TCP'].flags, 'matched':False}
+                if ippart.sport not in hosts[ippart.src]["otherports"]:
+                    hosts[ippart.src]["otherports"][ippart.sport] = {'flag':cap['TCP'].flags, 'matched':False}
             if tsig.extra is not None and type(tsig.extra).__name__ == "dict":
                 if "os" in tsig.extra:
-                    hosts[cap["IP"].src]["os"] = tsig.extra["os"]
+                    hosts[ippart.src]["os"] = tsig.extra["os"]
                 if "application" in tsig.extra:
-                    filt = list(filter(lambda app: app['appname'] == tsig.extra["application"], hosts[cap["IP"].src]["applications"]))
+                    filt = list(filter(lambda app: app['appname'] == tsig.extra["application"], hosts[ippart.src]["applications"]))
                     if len(filt) == 0:
-                        if cap["IP"].sport in hosts[cap["IP"].src]["otherports"]:
-                            hosts[cap["IP"].src]["otherports"][cap["IP"].sport]['matched'] = True
+                        if ippart.sport in hosts[ippart.src]["otherports"]:
+                            hosts[ippart.src]["otherports"][ippart.sport]['matched'] = True
                         extrainfo = None
                         if "os" in tsig.extra:
                             extrainfo = tsig.extra['os']
-                        hosts[cap["IP"].src]["applications"].append({ "version" : tsig.extra["version"],
-                                                                      "sport" : cap["IP"].sport,
+                        hosts[ippart.src]["applications"].append({ "version" : tsig.extra["version"],
+                                                                      "sport" : ippart.sport,
                                                                       "extrainf" : extrainfo,
                                                                       "apptype" : tsig.extra["apptype"],
                                                                       "appname" : tsig.extra["application"] })
@@ -87,27 +98,27 @@ def processCaptures(pcap):
                                         extrainfo += ' '
                                     if v is not None:
                                         extrainfo += "%s:%s" % (k,v)    
-                                id_ = hosts[cap["IP"].src]["applications"].index(filt[0])
-                                hosts[cap["IP"].src]["applications"][id_]['extrainf'] = extrainfo
+                                id_ = hosts[ippart.src]["applications"].index(filt[0])
+                                hosts[ippart.src]["applications"][id_]['extrainf'] = extrainfo
                         
             if match is not None:
-                if "bests" not in hosts[cap["IP"].src]["matches"]:
-                    hosts[cap["IP"].src]["matches"]["bests"] = []
-                filt = list(filter(lambda best: best['label'] == match.label, hosts[cap["IP"].src]["matches"]["bests"]))
+                if "bests" not in hosts[ippart.src]["matches"]:
+                    hosts[ippart.src]["matches"]["bests"] = []
+                filt = list(filter(lambda best: best['label'] == match.label, hosts[ippart.src]["matches"]["bests"]))
                 _, mtype, mos, mver = match.label.split(":")
                 if len(filt) == 0:
-                    hosts[cap["IP"].src]["matches"]["bests"].append({    "label":match.label,
+                    hosts[ippart.src]["matches"]["bests"].append({    "label":match.label,
                                                                 "distance":match.distance,
                                                                 "type":mtype,
                                                                 "os":mos,
                                                                 "version":mver, })
                 for top in match.top3:
-                    if "guesses" not in hosts[cap["IP"].src]["matches"]:
-                        hosts[cap["IP"].src]["matches"]["guesses"] = []
-                    filt = list(filter(lambda guess: guess['label'] == top["label"], hosts[cap["IP"].src]["matches"]["guesses"]))
+                    if "guesses" not in hosts[ippart.src]["matches"]:
+                        hosts[ippart.src]["matches"]["guesses"] = []
+                    filt = list(filter(lambda guess: guess['label'] == top["label"], hosts[ippart.src]["matches"]["guesses"]))
                     if len(filt) == 0:
                         _, systype, sysos, sysver = top["label"].split(":") 
-                        hosts[cap["IP"].src]["matches"]["guesses"].append({
+                        hosts[ippart.src]["matches"]["guesses"].append({
                             "label":top["label"], 
                             "distance":top["distance"],
                             "version":sysver,
