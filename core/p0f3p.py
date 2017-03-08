@@ -288,7 +288,7 @@ class p0f3p(object):
             pkt_sign.extra = {}
             if type(strload).__name__ == "bytes":
                 strload = strload.decode("utf-8", "ignore")
-            match = re.match(r"([\w]+) ([\d\.]+)?.*\((\w+)\)?", strload)
+            match = re.match(r"([\w]+) ([\d\w\.]+)", strload)
             if match is not None:
                 pkt_sign.extra["application"] = match.group(1)
                 pkt_sign.extra["version"] = match.group(2)
