@@ -6,6 +6,8 @@ A native and unofficial implementation of p0f3 in Python with extra analysis fea
 - Python 2 or 3
 - Scapy (use Scapy for Python3 if you prefer Python3)
 
+Use `pip install -r requirements.txt` (or `pip3` as needed) to install dependencies.
+
 ## Fingerprint a PCAP file
 
 To fingerprint a PCAP file, the `pcaprint.py` can be used in two different ways:
