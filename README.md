@@ -1,7 +1,7 @@
 # p0f3plus
 A native and unofficial implementation of p0f3 in Python with extra analysis features: It's p0f+
 
-## Dependencies
+## Dependencies
 
 - Python 2 or 3
 - Scapy (use Scapy for Python3 if you prefer Python3)
@@ -13,23 +13,23 @@ To fingerprint a PCAP file, the `pcaprint.py` can be used in two different ways:
 * the classic way that prints each frames like p0f3 do;
 * or to aggregate services in a nmap XML file like.
 
-Additionnal information are added to p0f3 signatures if some data are 
+Additionnal information are added to p0f3 signatures if some data are
 identified in packets. These information include HTTP or SMB headers
 (other features can be implemented).
 
-## Why I should use this tool?
+## Why I should use this tool?
 
 This tool is slow compared to the original C implementation of p0f3, but can be
-used to identify packets, and can be extend very quickly with useful features that 
-use payloads contained in the packets. 
+used to identify packets, and can be extend very quickly with useful features that
+use payloads contained in the packets.
 
 Originally, this tool was developped because the p0f implementation in Scapy is
 obsolete with p0f3 signatures, and these signatures were needed as a backup
-way to identify an OS, or/and a service.  
+way to identify an OS, or/and a service.
 
 ### Quick run
 
-#### Output in XML
+#### Output in XML
 
 To p0f3 with the default script `pcaprint.py` against a PCAP to output a nmap XML (beta),
 you can use the following command:
@@ -146,7 +146,7 @@ $ python3 ./pcaprint.py -c capture.pcapng -o output.xml
   </nmaprun>
 ```
 
-#### The classic p0f way
+#### The classic p0f way
 
 If you're nostalgic and want to print the PCAP pretty like p0f3 do, you can run
 the following command:
@@ -213,5 +213,5 @@ matches = a.matchsig(pktsign) # Gets matches in a 'ClassifiedSignature' object.
 
 ## Contributions
 
-A lot of work need to be done, this tool needs more features to identify packets, an IPv6 support, and so on. 
-This project is also opened for suggestions, so any contribution is welcomed :) 
+A lot of work need to be done, this tool needs more features to identify packets, an IPv6 support, and so on.
+This project is also opened for suggestions, so any contribution is welcomed :)
